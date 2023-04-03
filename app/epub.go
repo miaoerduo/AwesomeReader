@@ -10,6 +10,7 @@ import (
 	"text/template"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/miaoerduo/AwesomeReader/app/middleware"
 )
 
 type Index struct {
@@ -23,7 +24,8 @@ type EpubParser struct {
 	EpubPath  string
 	zipReader *zip.ReadCloser
 	// index of each page
-	IndexList []Index
+	IndexList      []Index
+	MiddleWareList []middleware.Middleware
 }
 
 func (app *EpubParser) Init() {
@@ -60,6 +62,7 @@ func (app *EpubParser) GetIndex(rc io.ReadCloser) {
 		label, _ := s.Find("navLabel text").Html()
 		href, _ := s.Find("content").Attr("src")
 		app.IndexList = append(app.IndexList, Index{Id: id, Label: label, Href: href})
+		fmt.Println(id, label, href)
 	})
 }
 
@@ -99,6 +102,12 @@ func (app *EpubParser) Dump(destDir string) {
 		if file.Name == "toc.ncx" {
 			continue
 		}
+		if file.FileInfo().IsDir() {
+			continue
+		}
+		if file.Name == "META-INF/container.xml" {
+			continue
+		}
 		rc, err := file.Open()
 		if err != nil {
 			log.Fatal(err)
@@ -109,30 +118,18 @@ func (app *EpubParser) Dump(destDir string) {
 		if _, err := os.Stat(dstFolder); os.IsNotExist(err) {
 			os.MkdirAll(dstFolder, 0755)
 		}
+		doc, _ := goquery.NewDocumentFromReader(rc)
+		selection := doc.Selection
+		for _, mw := range app.MiddleWareList {
+			selection = mw.Process(selection)
+		}
+
 		f, err := os.Create(dstFilePath)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer f.Close()
-		srcContent := make([]byte, file.UncompressedSize)
-		_, _ = rc.Read(srcContent)
-		fmt.Println(file.Name, file.UncompressedSize, len(srcContent), string(srcContent))
-		var dstContet string
-		if strings.HasSuffix(file.Name, ".html") {
-			// wrap html
-			fmt.Printf("wrap %s\n", string(srcContent))
-			dstContet, err = TTSWrapp(string(srcContent))
-			if err != nil {
-				log.Fatal(err)
-			}
-			dstContet, err = DictWrapper(dstContet)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-		_, err = f.Write([]byte(dstContet))
-		if err != nil {
-			log.Fatal(err)
-		}
+		html, _ := selection.Html()
+		fmt.Fprint(f, html)
 	}
 }

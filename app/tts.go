@@ -25,3 +25,9 @@ func TTSWrapp(htmlContent string) (string, error) {
 	})
 	return d.Html()
 }
+
+// get all sound from web browser
+// https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis
+// https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisUtterance
+// https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis/getVoices
+// https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis/speak
