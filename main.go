@@ -10,6 +10,7 @@ func main() {
 		EpubPath: "/Users/zhaoyu/Downloads/a.zip",
 		MiddleWareList: []middleware.Middleware{
 			&middleware.Dict{},
+			&middleware.Menu{},
 		}}
 	app.Init()
 	app.Dump("./out/")

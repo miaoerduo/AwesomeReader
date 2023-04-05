@@ -1,4 +1,4 @@
-function clickHandler(event) {
+function clickHandler(event, blankCallback) {
     // selection
     // click word
 
@@ -23,10 +23,15 @@ function clickHandler(event) {
         offset = pos.offset;
     }
 
-    if (offset >= 0 && offset < textNode.length && textNode.textContent[offset].match(/[a-zA-Z]/) != null) {
+    console.log(textNode)
+    
+    if (offset > 0 && offset < textNode.length && textNode.textContent[offset].match(/[a-zA-Z]/) != null) {
         // find word
         var text = textNode.textContent;
         var start = text.substring(0, offset).search(/\w+$/);
+        if (start < 0) {
+            return;
+        }
         var end = text.substring(offset).search(/\W/);
         if (end < 0) {
             end = text.length;
@@ -39,11 +44,14 @@ function clickHandler(event) {
     }
 
     // blank
-    blankHandler(event);
+    if (blankCallback) {
+        blankCallback(event);
+    }
 }
 
 function blankHandler(event) {
-    console.log("blank");
+    $("#menu-header").toggle();
+    $("#menu-tail").toggle();
 }
 
 function getDictResult(word, callback) {
@@ -169,4 +177,76 @@ function buildDisplayElem(result) {
     return content[0];
 }
 
-$("#main-book").on("click", clickHandler);
+$("#main-book").on("click", function(event) {
+    clickHandler(event, blankHandler)
+});
+
+$(function () {
+	var str = window.location.href;
+		str = str.substring(str.lastIndexOf("/") + 1),
+		getCookie = localStorage.getItem(str);
+	if (getCookie) {
+		$("html,body").scrollTop(getCookie);
+	}
+});
+
+$(window).scroll(function () {
+	var str = window.location.href;
+	str = str.substring(str.lastIndexOf("/") + 1);
+	var top = $(window).scrollTop();
+	localStorage.setItem(str, top);
+});
+
+function isInView(elem) {
+    var docViewTop = $(window).scrollTop();
+    var docViewBottom = docViewTop + $(window).height();
+
+    var elemTop = $(elem).offset().top;
+    var elemBottom = elemTop + $(elem).height();
+
+    return ((elemBottom <= docViewBottom) && (elemTop >= docViewTop));
+}
+
+$('#menu-play').on('click', function(e) {
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        $("#main-book p").css('background-color', 'white');
+        return;
+    }
+    let p_list = $("#main-book p");
+    for (let i = 0; i < p_list.length; i++) {
+        let p = $(p_list[i]);
+        if (!isInView(p)) {
+            continue;
+        }
+        let text = p.text();
+        let utterance = new SpeechSynthesisUtterance(text);
+        utterance.voice = speechSynthesis.getVoices().filter(function(voice) { return voice.name == 'Microsoft Steffan Online (Natural) - English (United States)'; })[0];
+        // sync scrool when the speech
+        let elemTop =  p.offset().top;
+        let elemHeight = p.height();
+        let elemBottom = elemTop + p.height();
+        utterance.onstart = function(event) {
+            p.css('background-color', '#ffdfc0');
+            if (elemTop < $(window).scrollTop() || elemBottom > ($(window).scrollTop() + document.body.clientWidth)) {
+                $('html, body').animate({
+                    scrollTop: elemTop - 100
+                }, 1000);
+            }
+        }
+        utterance.onend = function(event) {
+            p.css('background-color', 'white');
+        }
+        window.speechSynthesis.speak(utterance);
+    }
+});
+
+const speech = window.speechSynthesis;
+if(speech.onvoiceschanged !== undefined)
+{
+	speech.onvoiceschanged = () => populateVoiceList();
+}
+function populateVoiceList()
+{
+	speech.getVoices(); // now should have an array of all voices
+}
