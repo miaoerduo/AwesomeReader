@@ -35,6 +35,7 @@ func (dict *Dict) Process(doc *goquery.Selection) *goquery.Selection {
 
 	script := readContent(dictJsPath)
 	body := doc.Find("body")
+	body.WrapInnerHtml(`<div id="main-book"></div>`)
 	body.AppendHtml("<script src=\"https://unpkg.com/sweetalert/dist/sweetalert.min.js\"></script>")
 	body.AppendHtml("<script src=\"https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js\"></script>")
 	doc.Find("body").AppendHtml(`<script>` + script + `</script>`)

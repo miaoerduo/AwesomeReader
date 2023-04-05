@@ -1,8 +1,11 @@
 function checkDict(word) {
-    word = word.replace(/[^\w\s]/gi, '');
-    if (!word) {
-        return
+    // find first valid word
+    regex = /[\w']+/g;
+    word = word.match(regex);
+    if (word == null) {
+        return;
     }
+    word = word[0];
 
     // api.dictionaryapi.dev
     var url = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + word;
@@ -49,21 +52,69 @@ function checkDict(word) {
                 meanings: json['meanings']
             }
             html = BuildResultPanel(result);
+            $('body').css('overflow', 'hidden');
             swal({
                 content: html,
+            }).then((value) => {
+                console.log(value);
+                $('body').css('overflow', 'scroll');
             })
         }
     }
     xhr.send();
 }
 
-document.addEventListener('click', function (event) {
-    if (event.target.className != 'med-word') {
-        return
+function checkDictFn(event) {
+    // is class name contains `swal-button`
+    console.log(event)
+    if (event.target.className && event.target.className.indexOf('swal') >= 0 || event.target.className.indexOf('nodict') >= 0) {
+        return;
     }
-    let elem = document.elementFromPoint(event.clientX, event.clientY);
-    checkDict(elem.innerHTML)
-});
+
+    // selection
+    {
+        var word = window.getSelection().toString();
+        if (word.length > 0) {
+            checkDict(word);
+            return;
+        }
+    }
+
+    // click
+    {
+        var range;
+        var textNode;
+        var offset;
+        if (document.caretRangeFromPoint) {
+            range = document.caretRangeFromPoint(event.clientX, event.clientY);
+            textNode = range.startContainer;
+            offset = range.startOffset;
+        } else if (document.caretPositionFromPoint) {
+            var pos = document.caretPositionFromPoint(event.clientX, event.clientY);
+            textNode = pos.offsetNode;
+            offset = pos.offset;
+        }
+        
+        // blank position
+        if (offset >= textNode.length || textNode.textContent[offset].match(/[a-zA-Z]/) == null) {
+            handleBlank();
+            return;
+        }
+        // find word
+        var text = textNode.textContent;
+        var start = text.substring(0, offset).search(/\w+$/);
+        var end = text.substring(offset).search(/\W/);
+        if (end < 0) {
+            end = text.length;
+        }
+        var word = text.substring(start, end + offset);
+        if (word.length > 0) {
+            checkDict(word);
+        }
+    }
+}
+
+$("#main-book").on("mouseup", checkDictFn)
 
 function BuildResultPanel(result) {
     let content = $('<div style="max-height: 440px">');
@@ -111,7 +162,12 @@ function BuildResultPanel(result) {
         }
         part.append(def_p);
         meaning_p.append(part)
+        def_p.on('mouseup', checkDictFn);
     }
     content.append(meaning_p);
     return content[0];
+}
+
+function handleBlank(event) {
+    console.log(event)
 }

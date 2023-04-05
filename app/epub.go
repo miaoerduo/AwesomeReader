@@ -108,6 +108,8 @@ func (app *EpubParser) Dump(destDir string) {
 		if file.Name == "META-INF/container.xml" {
 			continue
 		}
+
+		// if file name ends with html
 		rc, err := file.Open()
 		if err != nil {
 			log.Fatal(err)
@@ -118,18 +120,21 @@ func (app *EpubParser) Dump(destDir string) {
 		if _, err := os.Stat(dstFolder); os.IsNotExist(err) {
 			os.MkdirAll(dstFolder, 0755)
 		}
-		doc, _ := goquery.NewDocumentFromReader(rc)
-		selection := doc.Selection
-		for _, mw := range app.MiddleWareList {
-			selection = mw.Process(selection)
-		}
-
 		f, err := os.Create(dstFilePath)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer f.Close()
-		html, _ := selection.Html()
-		fmt.Fprint(f, html)
+		if !strings.HasSuffix(file.Name, ".html") {
+			io.Copy(f, rc)
+		} else {
+			doc, _ := goquery.NewDocumentFromReader(rc)
+			selection := doc.Selection
+			for _, mw := range app.MiddleWareList {
+				selection = mw.Process(selection)
+			}
+			html, _ := selection.Html()
+			fmt.Fprint(f, html)
+		}
 	}
 }

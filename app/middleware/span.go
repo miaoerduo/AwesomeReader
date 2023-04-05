@@ -40,7 +40,6 @@ func (span *Span) AddSpan(node *html.Node) {
 	if parent == nil {
 		return
 	}
-	parent.RemoveChild(node)
 	for _, symbol := range node.Data {
 		if IsSymbol(symbol) {
 			if word != "" {
@@ -58,13 +57,13 @@ func (span *Span) AddSpan(node *html.Node) {
 					Type: html.TextNode,
 					Data: word,
 				})
-				parent.AppendChild(spanNode)
+				parent.InsertBefore(spanNode, node)
 				word = ""
 			}
-			parent.AppendChild(&html.Node{
+			parent.InsertBefore(&html.Node{
 				Type: html.TextNode,
 				Data: string(symbol),
-			})
+			}, node)
 			continue
 		}
 		word += string(symbol)
@@ -84,6 +83,7 @@ func (span *Span) AddSpan(node *html.Node) {
 			Type: html.TextNode,
 			Data: word,
 		})
-		parent.AppendChild(spanNode)
+		parent.InsertBefore(spanNode, node)
 	}
+	parent.RemoveChild(node)
 }
