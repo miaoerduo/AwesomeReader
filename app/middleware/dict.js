@@ -1,105 +1,29 @@
-function checkDict(word) {
-    // find first valid word
-    regex = /[\w']+/g;
-    word = word.match(regex);
-    if (word == null) {
-        return;
-    }
-    word = word[0];
-
-    // api.dictionaryapi.dev
-    var url = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + word;
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState == 4 && xhr.status == 200) {
-            var json = JSON.parse(xhr.responseText);
-            if (json.length == 0) {
-                return;
-            }
-            json = json[0];
-            const word = json['word'];
-            // choose the phonetic with audio
-            let phonetic_map = {}
-            const phonetics = json['phonetics'];
-            for (let i = 0; i < phonetics.length; i++) {
-                if (!phonetics[i]['audio']) {
-                    continue;
-                }
-                phonetic = phonetics[i]['text'];
-                audio = phonetics[i]['audio'];
-                // if autio ends with -us.mp3 or -uk.mp3, then use it
-                if (audio.endsWith('-us.mp3') || audio.endsWith('-uk.mp3')) {
-                    let country = audio.split('-')[1].split('.')[0];
-                    phonetic_map[country] = {
-                        'phonetic': phonetic,
-                        'audio': audio
-                    }
-                    continue;
-                }
-                phonetic_map['default'] = {
-                    'phonetic': phonetic,
-                    'audio': audio
-                }
-            }
-            if (phonetic_map.length == 0) {
-                return;
-            }
-            const result = {
-                word: word,
-                phonetic: json['phonetic'],
-                phonetic_map: phonetic_map,
-                meanings: json['meanings']
-            }
-            html = BuildResultPanel(result);
-            $('body').css('overflow', 'hidden');
-            swal({
-                content: html,
-            }).then((value) => {
-                console.log(value);
-                $('body').css('overflow', 'scroll');
-            })
-        }
-    }
-    xhr.send();
-}
-
-function checkDictFn(event) {
-    // is class name contains `swal-button`
-    console.log(event)
-    if (event.target.className && event.target.className.indexOf('swal') >= 0 || event.target.className.indexOf('nodict') >= 0) {
-        return;
-    }
+function clickHandler(event) {
+    // selection
+    // click word
 
     // selection
-    {
-        var word = window.getSelection().toString();
-        if (word.length > 0) {
-            checkDict(word);
-            return;
-        }
+    let selection = window.getSelection().toString();
+    if (selection.length > 0) {
+        getDictResult(selection, displayMeaning);
+        return;
     }
 
-    // click
-    {
-        var range;
-        var textNode;
-        var offset;
-        if (document.caretRangeFromPoint) {
-            range = document.caretRangeFromPoint(event.clientX, event.clientY);
-            textNode = range.startContainer;
-            offset = range.startOffset;
-        } else if (document.caretPositionFromPoint) {
-            var pos = document.caretPositionFromPoint(event.clientX, event.clientY);
-            textNode = pos.offsetNode;
-            offset = pos.offset;
-        }
-        
-        // blank position
-        if (offset >= textNode.length || textNode.textContent[offset].match(/[a-zA-Z]/) == null) {
-            handleBlank();
-            return;
-        }
+    // click word
+    let range;
+    let textNode;
+    let offset;
+    if (document.caretRangeFromPoint) {
+        range = document.caretRangeFromPoint(event.clientX, event.clientY);
+        textNode = range.startContainer;
+        offset = range.startOffset;
+    } else if (document.caretPositionFromPoint) {
+        let pos = document.caretPositionFromPoint(event.clientX, event.clientY);
+        textNode = pos.offsetNode;
+        offset = pos.offset;
+    }
+
+    if (offset >= 0 && offset < textNode.length && textNode.textContent[offset].match(/[a-zA-Z]/) != null) {
         // find word
         var text = textNode.textContent;
         var start = text.substring(0, offset).search(/\w+$/);
@@ -109,14 +33,91 @@ function checkDictFn(event) {
         }
         var word = text.substring(start, end + offset);
         if (word.length > 0) {
-            checkDict(word);
+            getDictResult(word, displayMeaning);
         }
+        return
     }
+
+    // blank
+    blankHandler(event);
 }
 
-$("#main-book").on("mouseup", checkDictFn)
+function blankHandler(event) {
+    console.log("blank");
+}
 
-function BuildResultPanel(result) {
+function getDictResult(word, callback) {
+    const regex = /[\w']+/g;
+    word = word.match(regex);
+    if (word == null) {
+        return;
+    }
+    word = word[0];
+
+    var url = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + word;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4 && xhr.status == 200) {
+            var json = JSON.parse(xhr.responseText);
+            if (json.length == 0) {
+                return;
+            }
+            callback(json)
+        }
+    }
+    xhr.send();
+}
+
+function displayMeaning(json) {
+    if (json == null) {
+        return;
+    }
+    json = json[0];
+    const word = json['word'];
+    // choose the phonetic with audio
+    let phonetic_map = {}
+    const phonetics = json['phonetics'];
+    for (let i = 0; i < phonetics.length; i++) {
+        if (!phonetics[i]['audio']) {
+            continue;
+        }
+        phonetic = phonetics[i]['text'];
+        audio = phonetics[i]['audio'];
+        // if autio ends with -us.mp3 or -uk.mp3, then use it
+        if (audio.endsWith('-us.mp3') || audio.endsWith('-uk.mp3')) {
+            let country = audio.split('-')[1].split('.')[0];
+            phonetic_map[country] = {
+                'phonetic': phonetic,
+                'audio': audio
+            }
+            continue;
+        }
+        phonetic_map['default'] = {
+            'phonetic': phonetic,
+            'audio': audio
+        }
+    }
+    if (phonetic_map.length == 0) {
+        return;
+    }
+    const result = {
+        word: word,
+        phonetic: json['phonetic'],
+        phonetic_map: phonetic_map,
+        meanings: json['meanings']
+    }
+    html = buildDisplayElem(result);
+    $('body').css('overflow', 'hidden');
+    swal({
+        content: html,
+    }).then((value) => {
+        console.log(value);
+        $('body').css('overflow', 'scroll');
+    })
+}
+
+function buildDisplayElem(result) {
     let content = $('<div style="max-height: 440px">');
     content.append($('<p style="text-align: left; margin-bottom: 5px; font-size: larger; padding-left: 10px">').append($('<span>').append($('<strong>').text(result['word']))));
 
@@ -162,12 +163,10 @@ function BuildResultPanel(result) {
         }
         part.append(def_p);
         meaning_p.append(part)
-        def_p.on('mouseup', checkDictFn);
+        def_p.on('mouseup', clickHandler);
     }
     content.append(meaning_p);
     return content[0];
 }
 
-function handleBlank(event) {
-    console.log(event)
-}
+$("#main-book").on("mouseup", clickHandler)
