@@ -9,7 +9,6 @@ func main() {
 	app := app.EpubParser{
 		EpubPath: "/Users/zhaoyu/Downloads/a.zip",
 		MiddleWareList: []middleware.Middleware{
-			// &middleware.Span{},
 			&middleware.Dict{},
 		}}
 	app.Init()
