@@ -163,10 +163,10 @@ function buildDisplayElem(result) {
         }
         part.append(def_p);
         meaning_p.append(part)
-        def_p.on('mouseup', clickHandler);
+        def_p.on('click', clickHandler);
     }
     content.append(meaning_p);
     return content[0];
 }
 
-$("#main-book").on("mouseup", clickHandler)
+$("#main-book").on("click", clickHandler);
