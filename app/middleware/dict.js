@@ -62,7 +62,8 @@ function getDictResult(word, callback) {
     }
     word = word[0];
 
-    var url = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + word;
+    const KEY = '77c9a1c7-d551-41fa-a695-f6f38f894ebb'
+    var url = "https://dictionaryapi.com/api/v3/references/collegiate/json/" + word + "?key=" + KEY;
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
     xhr.onreadystatechange = function () {
@@ -78,6 +79,13 @@ function getDictResult(word, callback) {
 }
 
 function displayMeaning(json) {
+    for (let idx = 0; idx < json.length; ++ idx) {
+        if (json[idx]['fl']) {
+            json = json[idx];
+            break;
+        }
+    }
+
     if (json == null) {
         return;
     }
